@@ -1,5 +1,13 @@
 {
-  "format": "IWMS-ENCRYPTED-V1-UNINITIALISED",
+  "format": "IWMS-ENCRYPTED-V1",
+  "algorithm": "AES-256-GCM",
+  "kdf": "PBKDF2-SHA256",
+  "iterations": 310000,
+  "salt": "tOm8n2NX3p/PGc5zR+g+og==",
+  "iv": "RrGSGKvmcRI6d23A",
+  "ciphertext": "mb47G1aqvEULpFI/JOK+OGrvVCVg6TPYlz5Y0mORLIHu8376R3zgdwsBAP3K3emY4O44dTm3jHq9P2f1FtVlIEgOwKZ8hob1+/OoRgf3xJR7HodaZGdWkizG+kMisdFRr+6ZQ/udBrzH4fYh3NSZVhyHajNoAviMpf+uA+Z8uif0MCZRXa8Gvcpm4NzeigQoPvkVt3IjqmjWogTnFV+rSW6ObtTEg8zo9TFnbMoEwb8QzcF0/nGmZJREUh4pZ+4sd5svw2xMhvpo+PEoTGQFz4s7OatxilPknQjNcLXAuCoNSIvLBGCrE5MkeAjU5YrR4DQyBWCGpOa52SPG+eN3rhVFgUejmnWCtVrLNoq6ltHD49T9OtZh3zwJ3SHYdYbWX67BjsadqmPXkwbqEev54MFUKWboL5ZnlEkQF6op6fvuTQpgJ852MZZPj3d1Z/ZT+FR5Wa0kc3pcNB4S+AUO6MnAzLbZj2jAMvp9RgSt2E4+4A7iwEtcUPMmppFz3Uz2AB+TnKkSKXo0O20DGtDE2t4xgstcWS3OFXLBYWcOmFhGOWBv6wedjQe4Vp0DxhxqXZjghjdNT8fRjuLYxkHq8CWVSYZL8pxnQCwlI9mHoxEpvXNzRbNNCpYKGGlZ0IH45jKTggOxiEP/8B5J52KJUC5vGIUm6oxL419ZO19ZnvjjYN8421soXOCiLmqXzBebkYSNZopb8Iw=",
+  "updatedAt": "2026-10-05T19:21:32.809Z",
+  "device": "homepc",
   "domain": "tasks",
-  "message": "V48 bootstrap file. Open index.html, connect GitHub, create the encryption passphrase, then Sync Now. This file will be replaced with AES-256-GCM encrypted content."
+  "file": "tasks.enc.json"
 }
