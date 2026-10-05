@@ -1,0 +1,59 @@
+{
+  "tasks": [],
+  "blocks": [],
+  "busy": [],
+  "windows": [
+    {
+      "id": "online-evening-work",
+      "name": "Evening work",
+      "start": "20:00",
+      "end": "22:00",
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "enabled": true
+    },
+    {
+      "id": "online-friday-catchup",
+      "name": "Friday catch-up",
+      "start": "09:00",
+      "end": "12:00",
+      "days": [
+        5
+      ],
+      "enabled": true
+    }
+  ],
+  "meetings": [],
+  "templates": [],
+  "sessions": [],
+  "awarenessDays": [],
+  "manualEntries": [],
+  "reportSettings": {
+    "organisation": "Maldives Digital Services",
+    "department": "D'MADD Project",
+    "preparedBy": "Ahmed Haleem",
+    "title": "Weekly Work Report",
+    "logoUrl": "",
+    "logoData": ""
+  },
+  "settings": {
+    "normalStart": "08:00",
+    "normalEnd": "14:00",
+    "days": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "maxBlock": 90,
+    "breakMinutes": 0,
+    "mode": "extended",
+    "hudMode": false
+  }
+}
