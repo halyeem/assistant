@@ -1,5 +1,0 @@
-{
-  "format": "IWMS-ENCRYPTED-V1-UNINITIALISED",
-  "domain": "tasks",
-  "message": "V48 bootstrap file. Open index.html, connect GitHub, create the encryption passphrase, then Sync Now. This file will be replaced with AES-256-GCM encrypted content."
-}
