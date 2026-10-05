@@ -121,7 +121,7 @@ Or just:
 <section class="panel"><h2>Cloud Data & Encryption</h2><p class="meta">Connect the repository once. Data is encrypted in the browser before it is sent to GitHub.</p><div class="row"><button class="btn primary" onclick="openGitHubSettings()">GitHub Connection</button><button class="btn" onclick="openEncryptionDialog()">Unlock / Change Passphrase</button><button class="btn" onclick="saveData()">Sync Now</button></div><div id="securitySummary" class="settings-summary"></div></section>
 <section class="panel"><h2>Data Management</h2><div class="row"><button class="btn" onclick="downloadBackup()">Download Encrypted Backup</button><button class="btn danger" onclick="newDataFile()">New / Clear Data</button><button class="btn" onclick="loadFromGitHub(true)">Reload Cloud Copy</button></div><p class="meta">A cleared workspace replaces cloud data only after Sync Now.</p></section>
 <section class="panel"><h2>Working Hours & Scheduling</h2><div class="form"><label>Normal start<input id="normalStart" type="time"></label><label>Normal end<input id="normalEnd" type="time"></label><label>Maximum block (minutes)<input id="maxBlock" type="number" min="1" step="1"></label><label>Minimum break between blocks<input id="breakMinutes" type="number" min="0" step="1"></label><label class="wide">Normal workdays<div id="workdays" class="row"></div></label></div><label class="hud-toggle" style="margin:14px 0"><input id="hudMode" type="checkbox" onchange="toggleHudMode(this.checked)"> HUD night mode</label><button class="btn primary" onclick="saveSettings()">Save settings and reorganise</button></section>
-<section class="panel"><h2>System Information</h2><div class="settings-summary"><b>Version 48</b><span>Encrypted GitHub edition</span><span id="deviceSummary"></span></div></section>
+<section class="panel"><h2>System Information</h2><div class="settings-summary"><b>Version 48.4</b><span>Encrypted GitHub edition</span><span id="deviceSummary"></span></div></section>
 </div></section>
 </main>
 <dialog id="taskDialog" class="project-editor-dialog"><form class="project-editor" onsubmit="saveTask(event)"><div class="editor-header"><div><h2>Project and Milestones</h2><div class="meta">Maintain project details, milestone dates, estimates and dependencies.</div></div><button type="button" class="btn" onclick="taskDialog.close()">Close</button></div><div class="editor-body"><input id="taskId" type="hidden"><section class="editor-section"><div class="editor-section-title"><h3>Project details</h3></div><div class="form project-fields"><label class="wide">Project name<input id="taskName" required placeholder="Enter project name"></label><label>Status<select id="taskStatus"><option>In progress</option><option>Waiting for approval</option><option>Parked</option><option>Completed</option><option>Closed</option></select></label><label>Priority<select id="taskPriority"><option>Immediate</option><option>Urgent</option><option>Low</option></select></label><label>Project start<input id="taskStart" type="date" required></label><label>Project deadline<input id="taskDeadline" type="date" required></label><label>Apply milestone template<select id="taskTemplate"><option value="">None</option></select></label></div></section><section class="editor-section"><div class="editor-section-title"><div><h3>Milestones</h3><div class="meta">Dependencies automatically influence milestone start dates.</div></div><div class="row"><button type="button" class="btn primary" onclick="addSub()">+ Add milestone</button><button type="button" class="btn" onclick="toggleBulkMilestones()">Bulk notepad entry</button></div></div><div class="milestone-column-heads"><span>Milestone</span><span>Estimate</span><span>Start</span><span>Finish</span><span>Predecessors</span><span>Done</span><span></span></div><div id="subRows" class="milestone-list"></div><div id="bulkMilestoneBox" class="bulk-editor"><label style="display:grid;gap:6px;font-weight:700">One milestone per line<textarea id="bulkMilestones" rows="8" placeholder="Research requirements | 120 | 2026-10-05 | 2026-10-05
@@ -188,8 +188,63 @@ async function deriveEncryptionKey(passphrase,salt){let material=await crypto.su
 async function encryptDataObject(obj){if(!encryptionPassphrase)throw new Error('Unlock encryption before saving.');let salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await deriveEncryptionKey(encryptionPassphrase,salt),plain=new TextEncoder().encode(JSON.stringify(obj)),cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,plain);return{format:'IWMS-ENCRYPTED-V1',algorithm:'AES-256-GCM',kdf:'PBKDF2-SHA256',iterations:310000,salt:bytesToBase64(salt),iv:bytesToBase64(iv),ciphertext:bytesToBase64(new Uint8Array(cipher)),updatedAt:new Date().toISOString(),device:githubConfig.device||'Unknown device'}}
 async function decryptDataObject(payload,passphrase){let salt=base64ToBytes(payload.salt),iv=base64ToBytes(payload.iv),key=await deriveEncryptionKey(passphrase,salt),plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,base64ToBytes(payload.ciphertext));return JSON.parse(new TextDecoder().decode(plain))}
 function isEncryptedPayload(x){return x&&x.format==='IWMS-ENCRYPTED-V1'&&x.ciphertext}
-function openEncryptionDialog(first=false){const field=document.getElementById('encryptionPassphrase'),dialog=document.getElementById('encryptionDialog'),message=document.getElementById('encryptionMessage'),action=document.getElementById('encryptionActionBtn');field.value='';dialog.dataset.first=first?'1':'0';message.textContent=first?'Create your first passphrase of at least 12 characters. Sync Now will then encrypt the five data files.':'Enter the passphrase used to encrypt this workspace.';action.textContent=first?'Create Workspace':'Unlock Data';dialog.showModal();setTimeout(()=>field.focus(),50)}
-async function unlockEncryption(e){e.preventDefault();const dialog=document.getElementById('encryptionDialog'),message=document.getElementById('encryptionMessage'),field=document.getElementById('encryptionPassphrase'),first=dialog.dataset.first==='1',pass=field.value||'';if(pass.length<12){message.textContent='Passphrase must contain at least 12 characters.';return}try{if(pendingEncryptedPayload?.multi){data=createEmptyData();loadedDomains={};for(const domain of ['tasks','projects','notes','meetings','settings']){const item=pendingEncryptedPayload.files.find(x=>x.domain===domain);if(!item)continue;applyDomainPayload(domain,await decryptDataObject(item.payload,pass));loadedDomains[domain]=true}normaliseLoadedData(data)}else if(pendingEncryptedPayload){normaliseLoadedData(await decryptDataObject(pendingEncryptedPayload,pass))}else if(first){data=createEmptyData();normaliseLoadedData(data);dataDirty=true}encryptionPassphrase=pass;pendingEncryptedPayload=null;pendingGitHubItem=null;domainBaselines={};dialog.close();renderAll();updateSecurityUI();updateLinkedFileStatus(first?'Workspace created - click Sync Now to encrypt the five files':'Encrypted data unlocked');showNotification(first?'Workspace created - now click Sync Now':'Workspace unlocked')}catch(err){console.error(err);message.textContent='Unable to decrypt. Check the passphrase or encrypted files.'}}
+function openEncryptionDialog(first=false){
+ const dialog=document.getElementById('encryptionDialog');
+ const field=document.getElementById('encryptionPassphrase');
+ const message=document.getElementById('encryptionMessage');
+ const action=document.getElementById('encryptionActionBtn');
+ field.value='';
+ dialog.dataset.first=first?'1':'0';
+ message.textContent=first?'Create your first passphrase of at least 12 characters. Sync Now will then encrypt the five data files.':'Enter the passphrase used to encrypt this workspace.';
+ action.textContent=first?'Create Workspace':'Unlock Data';
+ dialog.showModal();
+ setTimeout(()=>field.focus(),50)
+}
+async function unlockEncryption(e){
+ e.preventDefault();
+ const dialog=document.getElementById('encryptionDialog');
+ const field=document.getElementById('encryptionPassphrase');
+ const message=document.getElementById('encryptionMessage');
+ const action=document.getElementById('encryptionActionBtn');
+ const first=dialog.dataset.first==='1';
+ const pass=String(field.value||'');
+ if(pass.length<12){message.textContent='Passphrase must contain at least 12 characters.';field.focus();return}
+ action.disabled=true;
+ action.textContent=first?'Creating Workspace...':'Unlocking...';
+ message.textContent=first?'Creating the encrypted workspace...':'Decrypting cloud data...';
+ try{
+  if(pendingEncryptedPayload?.multi){
+   data=createEmptyData();loadedDomains={};
+   for(const domain of ['projects','tasks','notes','meetings','settings']){
+    const item=pendingEncryptedPayload.files.find(x=>x.domain===domain);
+    if(!item)continue;
+    applyDomainPayload(domain,await decryptDataObject(item.payload,pass));
+    loadedDomains[domain]=true
+   }
+   normaliseLoadedData(data)
+  }else if(pendingEncryptedPayload){
+   normaliseLoadedData(await decryptDataObject(pendingEncryptedPayload,pass))
+  }else if(first){
+   data=createEmptyData();normaliseLoadedData(data);dataDirty=true
+  }
+  encryptionPassphrase=pass;
+  encryptionKey=true;
+  pendingEncryptedPayload=null;
+  pendingGitHubItem=null;
+  domainBaselines={};
+  if(!first)Object.keys(DATA_FILES).forEach(setDomainBaseline);
+  dialog.close();
+  renderAll();updateSecurityUI();
+  updateLinkedFileStatus(first?'Workspace created - click Sync Now to encrypt the five files':'Encrypted data unlocked');
+  showNotification(first?'Workspace created - now click Sync Now':'Workspace unlocked')
+ }catch(err){
+  console.error(err);
+  message.textContent='Unable to decrypt. Check the passphrase or encrypted files.'
+ }finally{
+  action.disabled=false;
+  action.textContent=first?'Create Workspace':'Unlock Data'
+ }
+}
 function updateSecurityUI(){let unlocked=!!encryptionPassphrase;if(typeof encryptionTopState!=='undefined')encryptionTopState.textContent=unlocked?'🔐 Encrypted & unlocked':'🔒 Locked';if(typeof securitySummary!=='undefined')securitySummary.innerHTML='<b>'+(unlocked?'Encryption unlocked':'Encryption locked')+'</b><span>AES-256-GCM with PBKDF2-SHA256</span><span>Device: '+esc(githubConfig.device||'Not named')+'</span><span>Cloud folder: '+esc(githubConfig.path||'data')+'</span>';if(typeof deviceSummary!=='undefined')deviceSummary.textContent='Device: '+(githubConfig.device||'Not named')}
 function openNote(id){let n=data.notes.find(x=>x.id===id);noteId.value=n?.id||'';noteTitle.value=n?.title||'';noteBody.value=n?.body||'';noteType.value=n?.type||'Reminder';noteDue.value=n?.dueDate||'';noteColour.value=n?.colour||'yellow';noteDialog.showModal()}
 function saveNote(e){e.preventDefault();let old=data.notes.find(x=>x.id===noteId.value),n={id:old?.id||uid(),title:noteTitle.value.trim(),body:noteBody.value.trim(),type:noteType.value,dueDate:noteDue.value,colour:noteColour.value,createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:githubConfig.device||'This device',linkedTaskId:old?.linkedTaskId||''};old?Object.assign(old,n):data.notes.push(n);noteDialog.close();save()}
@@ -219,7 +274,7 @@ function domainSignature(domain){return JSON.stringify(domainPayload(domain))}
 function setDomainBaseline(domain){domainBaselines[domain]=domainSignature(domain)}
 function domainChanged(domain){return domainBaselines[domain]!==domainSignature(domain)}
 
-async function loadFromGitHub(showToast=false){if(!githubConfig.owner||!githubConfig.repo){updateLinkedFileStatus('Not connected — open Settings');updateSecurityUI();return false}updateLinkedFileStatus('Checking five cloud data files…');try{const encrypted=[],bootstrap=[],missing=[];githubFileShas={};loadedDomains={};for(const domain of Object.keys(DATA_FILES)){const r=await fetch(githubApiUrl(githubFilePath(domain)),{headers:githubHeaders()});if(r.status===404){missing.push(domain);continue}if(!r.ok)throw new Error(DATA_FILES[domain]+': GitHub '+r.status);const item=await r.json(),payload=JSON.parse(decodeBase64Utf8(item.content));githubFileShas[domain]=item.sha;if(payload?.format==='IWMS-ENCRYPTED-V1-UNINITIALISED')bootstrap.push({domain,payload,item});else if(isEncryptedPayload(payload))encrypted.push({domain,payload,item});else throw new Error(DATA_FILES[domain]+' has an unsupported format')}if(encrypted.length===0){data=createEmptyData();normaliseLoadedData(data);domainBaselines={};dataDirty=true;pendingEncryptedPayload=null;openEncryptionDialog(true);encryptionMessage.textContent='Create your first passphrase. Sync Now will replace the bootstrap files with encrypted data.';updateLinkedFileStatus('New workspace — create an encryption passphrase');return true}if(encrypted.length!==Object.keys(DATA_FILES).length)throw new Error('The data folder is partly encrypted. Restore all five bootstrap files or all five encrypted files.');pendingEncryptedPayload={multi:true,files:encrypted};openEncryptionDialog(false);updateLinkedFileStatus('Encrypted workspace found — enter passphrase');return true}catch(e){console.error(e);updateLinkedFileStatus('Load failed: '+e.message,true);if(showToast)showNotification(e.message,true);return false}}
+async function loadFromGitHub(showToast=false){if(!githubConfig.owner||!githubConfig.repo){updateLinkedFileStatus('Not connected — open Settings');updateSecurityUI();return false}updateLinkedFileStatus('Checking five cloud data files…');try{const encrypted=[],bootstrap=[],missing=[];githubFileShas={};loadedDomains={};for(const domain of Object.keys(DATA_FILES)){const r=await fetch(githubApiUrl(githubFilePath(domain)),{headers:githubHeaders()});if(r.status===404){missing.push(domain);continue}if(!r.ok)throw new Error(DATA_FILES[domain]+': GitHub '+r.status);const item=await r.json(),payload=JSON.parse(decodeBase64Utf8(item.content));githubFileShas[domain]=item.sha;if(payload?.format==='IWMS-ENCRYPTED-V1-UNINITIALISED')bootstrap.push({domain,payload,item});else if(isEncryptedPayload(payload))encrypted.push({domain,payload,item});else throw new Error(DATA_FILES[domain]+' has an unsupported format')}if(encrypted.length===0){data=createEmptyData();normaliseLoadedData(data);domainBaselines={};dataDirty=true;pendingEncryptedPayload=null;openEncryptionDialog(true);document.getElementById('encryptionMessage').textContent='Create your first passphrase. Sync Now will replace the bootstrap files with encrypted data.';updateLinkedFileStatus('New workspace — create an encryption passphrase');return true}if(encrypted.length!==Object.keys(DATA_FILES).length)throw new Error('The data folder is partly encrypted. Restore all five bootstrap files or all five encrypted files.');pendingEncryptedPayload={multi:true,files:encrypted};openEncryptionDialog(false);updateLinkedFileStatus('Encrypted workspace found — enter passphrase');return true}catch(e){console.error(e);updateLinkedFileStatus('Load failed: '+e.message,true);if(showToast)showNotification(e.message,true);return false}}
 async function writeGitHubData(){
  if(!githubConfig.owner||!githubConfig.repo)throw new Error('GitHub is not connected.');if(!githubToken())throw new Error('Enter a GitHub token in Settings before saving.');if(!encryptionPassphrase)throw new Error('Unlock encryption before saving.');
  let domains=Object.keys(DATA_FILES).filter(d=>!githubFileShas[d]||domainChanged(d));if(!domains.length){dataDirty=false;return{unchanged:true}}
